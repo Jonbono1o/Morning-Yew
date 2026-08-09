@@ -151,7 +151,7 @@
     padding:4px 0;
   }
 
-  /* Plant picker */
+  /* Plant picker (Home tab) */
   .plant-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-top:4px;}
   .plant-card{
     border:1px solid var(--line); border-radius:14px; padding:16px 10px; text-align:center;
@@ -161,6 +161,7 @@
   .plant-card svg{ width:26px; height:26px;}
   .plant-card path{ fill:var(--moss);}
   .plant-card .name{ font-family:'Fraunces',serif; font-size:14.5px; margin-top:8px;}
+  .plant-card .meta{ font-size:11px; color:var(--ink-dim); margin-top:3px; font-family:'JetBrains Mono',monospace;}
 
   /* Dial */
   .dial-wrap{
@@ -191,7 +192,7 @@
   .sprig path{ fill:var(--moss); }
   .sprig.pending path{ fill:var(--ink-dim); }
 
-  /* Stats strip */
+  /* Stats */
   .stat-strip{ display:flex; gap:10px; overflow-x:auto; padding-bottom:4px; margin-bottom:4px;}
   .stat-pill{
     flex:0 0 auto; background:rgba(185,139,78,0.1); border:1px solid var(--line);
@@ -201,6 +202,8 @@
   .stat-pill .l{ font-size:11.5px; color:var(--ink-dim); margin-top:3px;}
 
   /* Calendar */
+  .cal-scope{ display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;}
+  .cal-scope .name{ font-family:'Fraunces',serif; font-size:19px;}
   .cal-header{ display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;}
   .cal-header button{ background:none; color:var(--ink-dim); font-size:20px; padding:2px 12px;}
   .cal-title{ font-family:'Fraunces',serif; font-size:16.5px;}
@@ -225,18 +228,6 @@
   .log-entry .meta{ font-size:12.5px; color:var(--ink-dim); margin-top:2px;}
   .log-entry .del{ background:none; color:var(--ink-dim); font-size:18px; padding:4px 8px;}
   .empty{ color:var(--ink-dim); font-size:13.5px; text-align:center; padding:20px 10px;}
-
-  /* Forecast */
-  .forecast-card{
-    border:1px solid var(--line); border-radius:14px; padding:14px 16px; margin-bottom:10px;
-    background:rgba(243,236,219,0.04);
-  }
-  .forecast-card .top{ display:flex; justify-content:space-between; align-items:baseline;}
-  .forecast-card .date{ font-family:'Fraunces',serif; font-size:16px;}
-  .forecast-card .temps{ font-family:'JetBrains Mono',monospace; font-size:13.5px; color:var(--ink-dim);}
-  .forecast-card .cond{ font-size:13px; color:var(--brass-bright); margin-top:4px;}
-  .forecast-card .advice{ font-size:13.5px; margin-top:8px; line-height:1.45;}
-  .forecast-meta{ font-size:11.5px; color:var(--ink-dim); text-align:center; margin-top:6px;}
 
   .toast{
     position:fixed; bottom:92px; left:50%; transform:translateX(-50%) translateY(10px);
@@ -275,78 +266,83 @@
   </header>
 
   <main>
-    <!-- WATER TAB -->
-    <section class="tab active" id="tab-water">
-
-      <div id="plant-picker">
-        <div class="card">
-          <label>What are you watering?</label>
-          <div class="plant-grid" id="plant-grid"></div>
-          <button class="link-btn" id="toggle-add-cat" style="margin-top:12px;">+ Add a new plant category</button>
-          <div class="add-cat hidden" id="add-cat-form">
-            <div class="row" style="margin-top:8px;">
-              <div class="field">
-                <label>Name</label>
-                <input type="text" id="new-cat-name" placeholder="e.g. Roses" />
-              </div>
-              <div class="field" style="max-width:110px;">
-                <label>Secs each</label>
-                <input type="number" id="new-cat-secs" value="30" min="1" />
-              </div>
-            </div>
-            <button class="btn-small" id="save-cat" style="width:100%;">Add category</button>
-          </div>
-        </div>
-      </div>
-
-      <div id="round-setup" class="hidden">
-        <div class="card">
-          <div class="row" style="align-items:center;">
-            <div style="flex:1;">
-              <label style="margin-bottom:2px;">Watering</label>
-              <div id="selected-plant-name" style="font-family:'Fraunces',serif; font-size:18px;"></div>
-            </div>
-            <button class="btn-small" id="change-plant">Change</button>
-          </div>
-          <div class="row" style="margin-top:14px;">
+    <!-- HOME TAB: plant category picker -->
+    <section class="tab active" id="tab-home">
+      <div class="card">
+        <label>What are you watering?</label>
+        <div class="plant-grid" id="plant-grid"></div>
+        <button class="link-btn" id="toggle-add-cat" style="margin-top:12px;">+ Add a new plant category</button>
+        <div class="add-cat hidden" id="add-cat-form">
+          <div class="row" style="margin-top:8px;">
             <div class="field">
-              <label for="count-input">Plants this round</label>
-              <input type="number" id="count-input" min="1" value="1" />
+              <label>Name</label>
+              <input type="text" id="new-cat-name" placeholder="e.g. Roses" />
             </div>
-            <div class="field">
-              <label>Seconds each</label>
-              <div style="padding:11px 0; font-family:'JetBrains Mono',monospace; font-size:15px;" id="secs-each-display">30s</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="card dial-wrap">
-          <div class="dial">
-            <svg viewBox="0 0 200 200">
-              <circle class="dial-track" cx="100" cy="100" r="85"/>
-              <circle class="dial-progress" id="dial-progress" cx="100" cy="100" r="85" transform="rotate(-90 100 100)"/>
-            </svg>
-            <div class="dial-center">
-              <div id="timer-seconds">30</div>
-              <div id="timer-label">seconds</div>
+            <div class="field" style="max-width:110px;">
+              <label>Secs each</label>
+              <input type="number" id="new-cat-secs" value="30" min="1" />
             </div>
           </div>
-          <div id="timer-status">Ready when you are</div>
-          <div class="tally" id="tally"></div>
-
-          <div class="btn-row" style="width:100%; margin-top:6px;" id="start-controls">
-            <button class="btn-primary" id="btn-start">Start watering round</button>
-          </div>
-          <div class="btn-row hidden" style="width:100%;" id="running-controls">
-            <button class="btn-ghost" id="btn-pause">Pause</button>
-            <button class="btn-stop" id="btn-stop">Finish & log</button>
-          </div>
+          <button class="btn-small" id="save-cat" style="width:100%;">Add category</button>
         </div>
       </div>
     </section>
 
-    <!-- LOG TAB -->
-    <section class="tab" id="tab-log">
+    <!-- WATER TAB -->
+    <section class="tab" id="tab-water">
+      <div class="card">
+        <div class="row" style="align-items:center;">
+          <div style="flex:1;">
+            <label style="margin-bottom:2px;">Watering</label>
+            <div id="selected-plant-name" style="font-family:'Fraunces',serif; font-size:18px;">—</div>
+          </div>
+          <button class="btn-small" id="go-home">Home</button>
+        </div>
+        <div class="row" style="margin-top:14px;">
+          <div class="field">
+            <label for="count-input">Plants this round</label>
+            <input type="number" id="count-input" min="1" value="1" />
+          </div>
+          <div class="field">
+            <label>Seconds each</label>
+            <div style="padding:11px 0; font-family:'JetBrains Mono',monospace; font-size:15px;" id="secs-each-display">30s</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card dial-wrap">
+        <div class="dial">
+          <svg viewBox="0 0 200 200">
+            <circle class="dial-track" cx="100" cy="100" r="85"/>
+            <circle class="dial-progress" id="dial-progress" cx="100" cy="100" r="85" transform="rotate(-90 100 100)"/>
+          </svg>
+          <div class="dial-center">
+            <div id="timer-seconds">30</div>
+            <div id="timer-label">seconds</div>
+          </div>
+        </div>
+        <div id="timer-status">Ready when you are</div>
+        <div class="tally" id="tally"></div>
+
+        <div class="btn-row" style="width:100%; margin-top:6px;" id="start-controls">
+          <button class="btn-primary" id="btn-start">Start watering round</button>
+        </div>
+        <div class="btn-row hidden" style="width:100%;" id="running-controls">
+          <button class="btn-ghost" id="btn-pause">Pause</button>
+          <button class="btn-stop" id="btn-stop">Finish & log</button>
+        </div>
+        <div class="btn-row hidden" style="width:100%; margin-top:8px;" id="after-round-controls">
+          <button class="btn-ghost" id="btn-home-after">Back to Home</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- CALENDAR TAB -->
+    <section class="tab" id="tab-calendar">
+      <div class="cal-scope">
+        <div class="name" id="cal-scope-name">—</div>
+        <button class="link-btn" id="cal-switch">Switch plant</button>
+      </div>
       <div class="stat-strip" id="stat-strip"></div>
       <div class="card">
         <div class="cal-header">
@@ -358,35 +354,22 @@
         <div class="day-detail" id="day-detail"></div>
       </div>
     </section>
-
-    <!-- FORECAST TAB -->
-    <section class="tab" id="tab-forecast">
-      <div class="card">
-        <div class="field">
-          <label for="location-input">Your location</label>
-          <input type="text" id="location-input" placeholder="e.g. Bath, UK" />
-        </div>
-        <button class="btn-primary" id="btn-get-forecast">Get forecast & watering advice</button>
-        <div class="forecast-meta" id="forecast-meta"></div>
-      </div>
-      <div id="forecast-list"></div>
-    </section>
   </main>
 
   <div class="toast" id="toast"></div>
 
   <nav class="tabbar">
-    <button data-tab="water" class="active">
+    <button data-tab="home" class="active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-7 9 7"/><path d="M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9"/></svg>
+      Home
+    </button>
+    <button data-tab="water">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2s7 8.5 7 13a7 7 0 1 1-14 0c0-4.5 7-13 7-13z"/></svg>
       Water
     </button>
-    <button data-tab="log">
+    <button data-tab="calendar">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
       Calendar
-    </button>
-    <button data-tab="forecast">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.5 19a4.5 4.5 0 0 0 0-9 6 6 0 0 0-11.6 1.5A4 4 0 0 0 6.5 19h11z"/></svg>
-      Forecast
     </button>
   </nav>
 </div>
@@ -397,8 +380,7 @@ document.getElementById('dial-progress').style.strokeDasharray = CIRC;
 document.getElementById('dial-progress').style.strokeDashoffset = CIRC;
 
 let categories = [];
-let sessions = [];
-let settings = { location: '' };
+let sessionsByCat = {};   // { categoryId: [ {id, date, count, durationSeconds}, ... ] }
 let audioCtx = null;
 let selectedCategoryId = null;
 
@@ -449,42 +431,64 @@ async function init(){
     categories = [{id:'yew', name:'Yew Hedge', seconds:30, lastCount:10}];
     await saveJSON('categories', categories);
   }
-  sessions = await loadJSON('sessions', []);
-  settings = await loadJSON('settings', {location:''});
-  document.getElementById('location-input').value = settings.location || '';
-
-  const cache = await loadJSON('forecast-cache', null);
+  sessionsByCat = await loadJSON('sessions-by-category', {});
+  selectedCategoryId = await loadJSON('selected-category', null);
+  if(selectedCategoryId && !categories.find(c=>c.id===selectedCategoryId)) selectedCategoryId = null;
 
   renderPlantGrid();
-  renderCalendar();
-  if(cache) renderForecast(cache);
-
+  if(selectedCategoryId) applyCategoryToWaterTab(selectedCategoryId);
   bindEvents();
 }
 
-// ---------- plant picker ----------
+// ---------- category data helpers (category = parent file for its own watering data) ----------
+function getCatSessions(catId){ return sessionsByCat[catId] || []; }
+async function addCatSession(catId, entry){
+  sessionsByCat[catId] = sessionsByCat[catId] || [];
+  sessionsByCat[catId].unshift(entry);
+  await saveJSON('sessions-by-category', sessionsByCat);
+}
+async function deleteCatSession(catId, id){
+  sessionsByCat[catId] = (sessionsByCat[catId] || []).filter(s=>s.id!==id);
+  await saveJSON('sessions-by-category', sessionsByCat);
+}
+
+// ---------- plant picker (Home) ----------
 function sprigSVG(cls){
   return `<svg class="sprig ${cls}" viewBox="0 0 24 24"><path d="M12 2c-2 4-2 7 0 10 2-3 2-6 0-10zM4 10c3 1 5 3 6 6-3 0-6-2-6-6zM20 10c-3 1-5 3-6 6 3 0 6-2 6-6zM12 12v10"/></svg>`;
 }
 function renderPlantGrid(){
   const grid = document.getElementById('plant-grid');
-  grid.innerHTML = categories.map(c => `
+  grid.innerHTML = categories.map(c => {
+    const sess = getCatSessions(c.id);
+    let metaText = 'Not watered yet';
+    if(sess.length){
+      const days = Math.floor((Date.now() - new Date(sess[0].date).getTime())/86400000);
+      metaText = days===0 ? 'Watered today' : `${days}d since watering`;
+    }
+    return `
     <div class="plant-card ${c.id===selectedCategoryId?'active':''}" data-cat="${c.id}">
       <svg viewBox="0 0 24 24"><path d="M12 2c-2 4-2 7 0 10 2-3 2-6 0-10zM4 10c3 1 5 3 6 6-3 0-6-2-6-6zM20 10c-3 1-5 3-6 6 3 0 6-2 6-6zM12 12v10"/></svg>
       <div class="name">${escapeHtml(c.name)}</div>
-    </div>
-  `).join('');
+      <div class="meta">${metaText}</div>
+    </div>`;
+  }).join('');
 }
-function pickCategory(id){
+async function pickCategory(id){
   selectedCategoryId = id;
+  await saveJSON('selected-category', id);
+  applyCategoryToWaterTab(id);
+  renderPlantGrid();
+  switchTab('water');
+}
+function applyCategoryToWaterTab(id){
   const cat = categories.find(c=>c.id===id);
   if(!cat) return;
   document.getElementById('selected-plant-name').textContent = cat.name;
   document.getElementById('secs-each-display').textContent = cat.seconds + 's';
   document.getElementById('count-input').value = cat.lastCount || 1;
   resetDialDisplay(cat.seconds);
-  document.getElementById('plant-picker').classList.add('hidden');
-  document.getElementById('round-setup').classList.remove('hidden');
+  document.getElementById('after-round-controls').classList.add('hidden');
+  document.getElementById('start-controls').classList.remove('hidden');
 }
 function currentCategory(){
   return categories.find(c=>c.id===selectedCategoryId);
@@ -527,25 +531,22 @@ function beep(freq, startOffset, dur, type){
   o.start(audioCtx.currentTime + startOffset);
   o.stop(audioCtx.currentTime + startOffset + dur + 0.02);
 }
-// Longer, louder alert pattern (~2.4s of pulses) so it cuts through other audio
-// playing on the same device. Note: browsers can't guarantee ducking another
-// app's audio, so this works best while Morning Yew's tab stays open/foregrounded.
+// Short 3-beep alert when moving to the next plant
 function playNextAlarm(){
   ensureAudio();
-  const times = [0, 0.32, 0.64, 0.96, 1.28, 1.6, 1.92];
-  times.forEach(t => beep(880, t, 0.24, 'square'));
-  if(navigator.vibrate) try{navigator.vibrate([180,90,180,90,180,90,180,90,180,90,180]);}catch(e){}
+  [0, 0.28, 0.56].forEach(t => beep(880, t, 0.2, 'square'));
+  if(navigator.vibrate) try{navigator.vibrate([160,80,160,80,160]);}catch(e){}
 }
+// Short 3-beep ascending alert when the whole round is done
 function playFinishAlarm(){
   ensureAudio();
-  const seq = [[880,0],[1046,0.34],[1318,0.68],[880,1.1],[1046,1.44],[1318,1.78],[1568,2.15]];
-  seq.forEach(([f,t]) => beep(f, t, 0.28, 'square'));
-  if(navigator.vibrate) try{navigator.vibrate([200,90,200,90,200,90,200,90,450]);}catch(e){}
+  [[880,0],[1046,0.28],[1318,0.56]].forEach(([f,t]) => beep(f, t, 0.24, 'square'));
+  if(navigator.vibrate) try{navigator.vibrate([180,90,180,90,320]);}catch(e){}
 }
 
 function startTimer(){
   const cat = currentCategory();
-  if(!cat){ toast('Pick a plant first'); return; }
+  if(!cat){ toast('Pick a plant on Home first'); switchTab('home'); return; }
   const count = parseInt(document.getElementById('count-input').value, 10) || 1;
   if(count < 1){ toast('Enter at least 1 plant'); return; }
 
@@ -562,9 +563,10 @@ function startTimer(){
   timer.targetEnd = Date.now() + cat.seconds * 1000;
 
   document.getElementById('start-controls').classList.add('hidden');
+  document.getElementById('after-round-controls').classList.add('hidden');
   document.getElementById('running-controls').classList.remove('hidden');
   document.getElementById('running-controls').style.display = 'flex';
-  document.getElementById('change-plant').disabled = true;
+  document.getElementById('go-home').disabled = true;
   document.getElementById('timer-status').textContent = `Plant 1 of ${count} — ${cat.name}`;
   renderTally();
 
@@ -621,68 +623,72 @@ async function finishTimer(completedAll){
     const entry = {
       id: 's_' + Date.now(),
       date: new Date().toISOString(),
-      categoryId: timer.categoryId,
-      categoryName: timer.categoryName,
       count: wasCount,
       durationSeconds
     };
-    sessions.unshift(entry);
-    await saveJSON('sessions', sessions);
+    await addCatSession(timer.categoryId, entry);
 
     const cat = categories.find(c=>c.id===timer.categoryId);
     if(cat){ cat.lastCount = wasCount; await saveJSON('categories', categories); }
 
     selectedDay = dateKey(entry.date);
     calendarMonth = new Date(entry.date);
-    renderCalendar();
+    renderPlantGrid();
     toast(completedAll ? `Logged: ${wasCount} ${timer.categoryName} watered` : `Logged ${wasCount} of ${timer.totalCount} before stopping`);
   } else {
     toast('Round stopped — nothing logged');
   }
 
-  document.getElementById('start-controls').classList.remove('hidden');
   document.getElementById('running-controls').classList.add('hidden');
+  document.getElementById('start-controls').classList.remove('hidden');
+  document.getElementById('after-round-controls').classList.remove('hidden');
   document.getElementById('btn-pause').textContent = 'Pause';
-  document.getElementById('change-plant').disabled = false;
+  document.getElementById('go-home').disabled = false;
   const cat = currentCategory();
   resetDialDisplay(timer.intervalSeconds || (cat ? cat.seconds : 30));
 }
 
-// ---------- calendar / log tab ----------
+// ---------- calendar tab (scoped to selected category — its "parent file") ----------
 function fmtTime(iso){
   return new Date(iso).toLocaleTimeString(undefined, {hour:'2-digit', minute:'2-digit'});
 }
 function daysSince(iso){
   return Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
 }
-function sessionsByDay(){
+function sessionsByDayForCat(catId){
   const map = {};
-  sessions.forEach(s=>{
+  getCatSessions(catId).forEach(s=>{
     const k = dateKey(s.date);
     (map[k] = map[k] || []).push(s);
   });
   return map;
 }
-function renderStatStrip(){
-  const stripEl = document.getElementById('stat-strip');
-  const latestByCat = {};
-  sessions.forEach(s=>{
-    if(!latestByCat[s.categoryId] || new Date(s.date) > new Date(latestByCat[s.categoryId].date)){
-      latestByCat[s.categoryId] = s;
-    }
-  });
-  stripEl.innerHTML = categories.map(c=>{
-    const last = latestByCat[c.id];
-    const val = last ? daysSince(last.date) : null;
-    return `<div class="stat-pill">
+function renderCalendarTab(){
+  const cat = currentCategory();
+  if(!cat){
+    document.getElementById('cal-scope-name').textContent = 'No plant selected';
+    document.getElementById('stat-strip').innerHTML = '';
+    document.getElementById('cal-grid').innerHTML = '';
+    document.getElementById('cal-title').textContent = '';
+    document.getElementById('day-detail').innerHTML = '<div class="empty">Pick a plant on Home to see its watering calendar.</div>';
+    return;
+  }
+  document.getElementById('cal-scope-name').textContent = cat.name;
+
+  const sess = getCatSessions(cat.id);
+  const val = sess.length ? daysSince(sess[0].date) : null;
+  document.getElementById('stat-strip').innerHTML = `
+    <div class="stat-pill">
       <div class="n">${val===null ? '—' : (val===0?'Today':val+'d')}</div>
-      <div class="l">${escapeHtml(c.name)} last watered</div>
-    </div>`;
-  }).join('');
-}
-function renderCalendar(){
-  renderStatStrip();
-  const byDay = sessionsByDay();
+      <div class="l">${escapeHtml(cat.name)} last watered</div>
+    </div>
+    <div class="stat-pill">
+      <div class="n">${sess.length}</div>
+      <div class="l">Rounds logged total</div>
+    </div>
+  `;
+
+  const byDay = sessionsByDayForCat(cat.id);
   const year = calendarMonth.getFullYear();
   const month = calendarMonth.getMonth();
   document.getElementById('cal-title').textContent =
@@ -704,10 +710,10 @@ function renderCalendar(){
     </div>`;
   }
   document.getElementById('cal-grid').innerHTML = html;
-  renderDayDetail(byDay);
+  renderDayDetail(cat.id, byDay);
 }
-function renderDayDetail(byDay){
-  byDay = byDay || sessionsByDay();
+function renderDayDetail(catId, byDay){
+  byDay = byDay || sessionsByDayForCat(catId);
   const entries = byDay[selectedDay] || [];
   const label = new Date(selectedDay + 'T12:00:00').toLocaleDateString(undefined, {weekday:'long', day:'numeric', month:'long'});
   const detail = document.getElementById('day-detail');
@@ -718,8 +724,8 @@ function renderDayDetail(byDay){
   detail.innerHTML = `<h4>${label}</h4>` + entries.map(s=>`
     <div class="log-entry">
       <div>
-        <div class="cat">${escapeHtml(s.categoryName)}</div>
-        <div class="meta">${fmtTime(s.date)} · ${s.count} plant${s.count===1?'':'s'} · ${Math.round(s.durationSeconds/60*10)/10} min</div>
+        <div class="cat">${s.count} plant${s.count===1?'':'s'} watered</div>
+        <div class="meta">${fmtTime(s.date)} · ${Math.round(s.durationSeconds/60*10)/10} min</div>
       </div>
       <button class="del" data-del="${s.id}">×</button>
     </div>
@@ -727,80 +733,11 @@ function renderDayDetail(byDay){
 }
 function selectDay(key){
   selectedDay = key;
-  renderCalendar();
+  renderCalendarTab();
 }
 function shiftMonth(delta){
   calendarMonth = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth()+delta, 1);
-  renderCalendar();
-}
-
-// ---------- forecast tab ----------
-async function getForecast(){
-  const loc = document.getElementById('location-input').value.trim();
-  if(!loc){ toast('Enter a location first'); return; }
-  settings.location = loc;
-  await saveJSON('settings', settings);
-
-  const btn = document.getElementById('btn-get-forecast');
-  btn.disabled = true;
-  btn.textContent = 'Fetching forecast…';
-  document.getElementById('forecast-meta').textContent = '';
-
-  try{
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-6",
-        max_tokens: 1000,
-        messages: [{
-          role: "user",
-          content: `Search for the current 5-day weather forecast for ${loc}. Then respond with ONLY a raw JSON array (no markdown fences, no preamble, no commentary) of exactly 5 objects, one per upcoming day in order, each with these fields: "date" (short e.g. "Mon 11 Aug"), "condition" (short phrase e.g. "Light rain"), "highC" (number), "lowC" (number), "rainChancePercent" (number 0-100), "wateringAdvice" (one short specific sentence about whether/when to water an evergreen yew hedge that day, considering rain chance and heat — e.g. recommend early morning or evening watering on hot dry days, and recommend skipping watering if meaningful rain is expected).`
-        }],
-        tools: [{ type: "web_search_20250305", name: "web_search" }]
-      })
-    });
-    const data = await response.json();
-    const text = (data.content || [])
-      .map(item => item.type === 'text' ? item.text : '')
-      .filter(Boolean)
-      .join('\n');
-    const clean = text.replace(/```json/g,'').replace(/```/g,'').trim();
-    const jsonStart = clean.indexOf('[');
-    const jsonEnd = clean.lastIndexOf(']');
-    const parsed = JSON.parse(clean.slice(jsonStart, jsonEnd+1));
-
-    const cache = { location: loc, fetchedAt: new Date().toISOString(), days: parsed };
-    await saveJSON('forecast-cache', cache);
-    renderForecast(cache);
-    toast('Forecast updated');
-  }catch(e){
-    console.error(e);
-    document.getElementById('forecast-list').innerHTML = '<div class="empty">Could not fetch the forecast just now. Try again in a moment.</div>';
-  }finally{
-    btn.disabled = false;
-    btn.textContent = 'Get forecast & watering advice';
-  }
-}
-function renderForecast(cache){
-  const listEl = document.getElementById('forecast-list');
-  if(!cache || !cache.days || !cache.days.length){
-    listEl.innerHTML = '<div class="empty">No forecast yet — enter your location above and fetch one.</div>';
-    return;
-  }
-  listEl.innerHTML = cache.days.map(d => `
-    <div class="forecast-card">
-      <div class="top">
-        <div class="date">${escapeHtml(d.date||'')}</div>
-        <div class="temps">${d.highC!=null?d.highC+'°':''}${d.lowC!=null?' / '+d.lowC+'°':''}</div>
-      </div>
-      <div class="cond">${escapeHtml(d.condition||'')} ${d.rainChancePercent!=null? '· '+d.rainChancePercent+'% rain':''}</div>
-      <div class="advice">${escapeHtml(d.wateringAdvice||'')}</div>
-    </div>
-  `).join('');
-  const mins = Math.round((Date.now() - new Date(cache.fetchedAt).getTime())/60000);
-  document.getElementById('forecast-meta').textContent =
-    `${cache.location} · updated ${mins<1?'just now':mins+' min ago'}`;
+  renderCalendarTab();
 }
 
 // ---------- misc ----------
@@ -811,11 +748,16 @@ function switchTab(name){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.getElementById('tab-'+name).classList.add('active');
   document.querySelectorAll('nav.tabbar button').forEach(b=>b.classList.toggle('active', b.dataset.tab===name));
+  if(name === 'calendar') renderCalendarTab();
+  if(name === 'home') renderPlantGrid();
 }
 
 function bindEvents(){
   document.querySelectorAll('nav.tabbar button').forEach(b=>{
-    b.addEventListener('click', ()=>switchTab(b.dataset.tab));
+    b.addEventListener('click', ()=>{
+      if(timer.running){ toast('Finish or stop the current round first'); return; }
+      switchTab(b.dataset.tab);
+    });
   });
 
   document.getElementById('plant-grid').addEventListener('click', (e)=>{
@@ -823,12 +765,12 @@ function bindEvents(){
     if(!card) return;
     pickCategory(card.dataset.cat);
   });
-  document.getElementById('change-plant').addEventListener('click', ()=>{
+  document.getElementById('go-home').addEventListener('click', ()=>{
     if(timer.running){ toast('Finish or stop the current round first'); return; }
-    document.getElementById('round-setup').classList.add('hidden');
-    document.getElementById('plant-picker').classList.remove('hidden');
-    renderPlantGrid();
+    switchTab('home');
   });
+  document.getElementById('btn-home-after').addEventListener('click', ()=>switchTab('home'));
+  document.getElementById('cal-switch').addEventListener('click', ()=>switchTab('home'));
 
   document.getElementById('toggle-add-cat').addEventListener('click', ()=>{
     document.getElementById('add-cat-form').classList.toggle('hidden');
@@ -841,7 +783,6 @@ function bindEvents(){
     categories.push({id, name, seconds:secs, lastCount:1});
     await saveJSON('categories', categories);
     renderPlantGrid();
-    renderStatStrip();
     document.getElementById('new-cat-name').value = '';
     document.getElementById('add-cat-form').classList.add('hidden');
     toast(`Added "${name}"`);
@@ -861,12 +802,10 @@ function bindEvents(){
   document.getElementById('day-detail').addEventListener('click', async (e)=>{
     const id = e.target.dataset.del;
     if(!id) return;
-    sessions = sessions.filter(s=>s.id!==id);
-    await saveJSON('sessions', sessions);
-    renderCalendar();
+    await deleteCatSession(currentCategory().id, id);
+    renderCalendarTab();
+    renderPlantGrid();
   });
-
-  document.getElementById('btn-get-forecast').addEventListener('click', getForecast);
 }
 
 init();
