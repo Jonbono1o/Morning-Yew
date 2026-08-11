@@ -48,6 +48,7 @@
   header{
     padding:28px 22px 14px;
     border-bottom:1px solid var(--line);
+    display:flex; justify-content:space-between; align-items:flex-start;
   }
   header .eyebrow{
     font-family:'JetBrains Mono',monospace;
@@ -69,6 +70,11 @@
     color:var(--ink-dim);
     font-size:13.5px;
   }
+  #sync-dot{
+    width:8px; height:8px; border-radius:50%; background:var(--ink-dim); margin-top:8px;
+    transition:background .3s;
+  }
+  #sync-dot.live{ background:var(--moss); box-shadow:0 0 0 3px rgba(127,160,122,0.2);}
   main{flex:1; padding:20px 18px 10px;}
   .tab{display:none;}
   .tab.active{display:block; animation:fade .25s ease;}
@@ -260,9 +266,12 @@
 <body>
 <div id="app">
   <header>
-    <div class="eyebrow">Garden · Watering Log</div>
-    <h1>Morning Yew</h1>
-    <p class="sub">Time it, log it, know when it's due again.</p>
+    <div>
+      <div class="eyebrow">Garden · Watering Log</div>
+      <h1>Morning Yew</h1>
+      <p class="sub">Shared with your household.</p>
+    </div>
+    <div id="sync-dot" title="Sync status"></div>
   </header>
 
   <main>
@@ -374,15 +383,33 @@
   </nav>
 </div>
 
-<script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
+import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDPBkw8dVWKwnt9Ot0aM2hQTsXIfiIey8A",
+  authDomain: "morning-yew-caa56.firebaseapp.com",
+  projectId: "morning-yew-caa56",
+  storageBucket: "morning-yew-caa56.firebasestorage.app",
+  messagingSenderId: "968555718206",
+  appId: "1:968555718206:web:a1cdc6285dffe0e4f1936f"
+};
+const fbApp = initializeApp(firebaseConfig);
+const db = getFirestore(fbApp);
+const sharedRef = doc(db, "morningyew", "shared");
+
 const CIRC = 2 * Math.PI * 85;
 document.getElementById('dial-progress').style.strokeDasharray = CIRC;
 document.getElementById('dial-progress').style.strokeDashoffset = CIRC;
 
-let categories = [];
+const DEFAULT_CATEGORIES = [{id:'yew', name:'Yew Hedge', seconds:30, lastCount:10}];
+
+let categories = DEFAULT_CATEGORIES;
 let sessionsByCat = {};   // { categoryId: [ {id, date, count, durationSeconds}, ... ] }
 let audioCtx = null;
-let selectedCategoryId = null;
+let selectedCategoryId = localStorage.getItem('morningyew-selected-category') || null;
+let hasLoadedOnce = false;
 
 let calendarMonth = new Date();
 let selectedDay = todayKey();
@@ -404,18 +431,6 @@ function dateKey(iso){
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 }
 
-// ---------- storage helpers ----------
-async function loadJSON(key, fallback){
-  try{
-    const r = await window.storage.get(key, false);
-    return r ? JSON.parse(r.value) : fallback;
-  }catch(e){ return fallback; }
-}
-async function saveJSON(key, val){
-  try{ await window.storage.set(key, JSON.stringify(val), false); }
-  catch(e){ console.error('storage save failed', key, e); }
-}
-
 function toast(msg){
   const t = document.getElementById('toast');
   t.textContent = msg;
@@ -424,32 +439,59 @@ function toast(msg){
   t._h = setTimeout(()=>t.classList.remove('show'), 2200);
 }
 
-// ---------- init ----------
-async function init(){
-  categories = await loadJSON('categories', null);
-  if(!categories){
-    categories = [{id:'yew', name:'Yew Hedge', seconds:30, lastCount:10}];
-    await saveJSON('categories', categories);
+// ---------- shared (Firestore) sync ----------
+async function pushShared(){
+  try{
+    await setDoc(sharedRef, { categories, sessionsByCat }, { merge:false });
+    setSyncDot(true);
+  }catch(e){
+    console.error('sync write failed', e);
+    setSyncDot(false);
+    toast('Could not sync — check connection');
   }
-  sessionsByCat = await loadJSON('sessions-by-category', {});
-  selectedCategoryId = await loadJSON('selected-category', null);
-  if(selectedCategoryId && !categories.find(c=>c.id===selectedCategoryId)) selectedCategoryId = null;
-
-  renderPlantGrid();
-  if(selectedCategoryId) applyCategoryToWaterTab(selectedCategoryId);
-  bindEvents();
+}
+function setSyncDot(ok){
+  document.getElementById('sync-dot').classList.toggle('live', !!ok);
 }
 
-// ---------- category data helpers (category = parent file for its own watering data) ----------
+function subscribeShared(){
+  onSnapshot(sharedRef, (snap)=>{
+    setSyncDot(true);
+    if(snap.exists()){
+      const data = snap.data();
+      categories = (data.categories && data.categories.length) ? data.categories : DEFAULT_CATEGORIES;
+      sessionsByCat = data.sessionsByCat || {};
+    } else {
+      categories = DEFAULT_CATEGORIES;
+      sessionsByCat = {};
+      if(!hasLoadedOnce) pushShared();
+    }
+    hasLoadedOnce = true;
+
+    if(selectedCategoryId && !categories.find(c=>c.id===selectedCategoryId)){
+      selectedCategoryId = null;
+    }
+
+    renderPlantGrid();
+    if(selectedCategoryId) applyCategoryToWaterTab(selectedCategoryId);
+    const activeTab = document.querySelector('nav.tabbar button.active')?.dataset.tab;
+    if(activeTab === 'calendar') renderCalendarTab();
+  }, (err)=>{
+    console.error('sync listen failed', err);
+    setSyncDot(false);
+  });
+}
+
+// ---------- category data helpers (category = parent for its own watering data) ----------
 function getCatSessions(catId){ return sessionsByCat[catId] || []; }
 async function addCatSession(catId, entry){
   sessionsByCat[catId] = sessionsByCat[catId] || [];
   sessionsByCat[catId].unshift(entry);
-  await saveJSON('sessions-by-category', sessionsByCat);
+  await pushShared();
 }
 async function deleteCatSession(catId, id){
   sessionsByCat[catId] = (sessionsByCat[catId] || []).filter(s=>s.id!==id);
-  await saveJSON('sessions-by-category', sessionsByCat);
+  await pushShared();
 }
 
 // ---------- plant picker (Home) ----------
@@ -475,7 +517,7 @@ function renderPlantGrid(){
 }
 async function pickCategory(id){
   selectedCategoryId = id;
-  await saveJSON('selected-category', id);
+  localStorage.setItem('morningyew-selected-category', id);
   applyCategoryToWaterTab(id);
   renderPlantGrid();
   switchTab('water');
@@ -531,13 +573,11 @@ function beep(freq, startOffset, dur, type){
   o.start(audioCtx.currentTime + startOffset);
   o.stop(audioCtx.currentTime + startOffset + dur + 0.02);
 }
-// Short 3-beep alert when moving to the next plant
 function playNextAlarm(){
   ensureAudio();
   [0, 0.28, 0.56].forEach(t => beep(880, t, 0.2, 'square'));
   if(navigator.vibrate) try{navigator.vibrate([160,80,160,80,160]);}catch(e){}
 }
-// Short 3-beep ascending alert when the whole round is done
 function playFinishAlarm(){
   ensureAudio();
   [[880,0],[1046,0.28],[1318,0.56]].forEach(([f,t]) => beep(f, t, 0.24, 'square'));
@@ -626,10 +666,9 @@ async function finishTimer(completedAll){
       count: wasCount,
       durationSeconds
     };
-    await addCatSession(timer.categoryId, entry);
-
     const cat = categories.find(c=>c.id===timer.categoryId);
-    if(cat){ cat.lastCount = wasCount; await saveJSON('categories', categories); }
+    if(cat) cat.lastCount = wasCount;
+    await addCatSession(timer.categoryId, entry);
 
     selectedDay = dateKey(entry.date);
     calendarMonth = new Date(entry.date);
@@ -781,7 +820,7 @@ function bindEvents(){
     if(!name){ toast('Give the category a name'); return; }
     const id = 'c_' + Date.now();
     categories.push({id, name, seconds:secs, lastCount:1});
-    await saveJSON('categories', categories);
+    await pushShared();
     renderPlantGrid();
     document.getElementById('new-cat-name').value = '';
     document.getElementById('add-cat-form').classList.add('hidden');
@@ -808,7 +847,8 @@ function bindEvents(){
   });
 }
 
-init();
+bindEvents();
+subscribeShared();
 </script>
 </body>
 </html>
