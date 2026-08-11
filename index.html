@@ -164,10 +164,15 @@
     background:rgba(185,139,78,0.06); cursor:pointer;
   }
   .plant-card.active{ border-color:var(--brass); background:rgba(185,139,78,0.2);}
+  .plant-card{ position:relative; }
   .plant-card svg{ width:26px; height:26px;}
   .plant-card path{ fill:var(--moss);}
   .plant-card .name{ font-family:'Fraunces',serif; font-size:14.5px; margin-top:8px;}
   .plant-card .meta{ font-size:11px; color:var(--ink-dim); margin-top:3px; font-family:'JetBrains Mono',monospace;}
+  .edit-cat-btn{
+    position:absolute; top:6px; right:6px; padding:4px 7px; font-size:12px; line-height:1;
+    background:rgba(22,33,27,0.6); color:var(--ink-dim); border-radius:7px;
+  }
 
   /* Dial */
   .dial-wrap{
@@ -293,6 +298,24 @@
             </div>
           </div>
           <button class="btn-small" id="save-cat" style="width:100%;">Add category</button>
+        </div>
+
+        <div class="add-cat hidden" id="edit-cat-form">
+          <label style="margin-top:6px;">Editing plant</label>
+          <div class="row" style="margin-top:8px;">
+            <div class="field">
+              <label>Name</label>
+              <input type="text" id="edit-cat-name" />
+            </div>
+            <div class="field" style="max-width:110px;">
+              <label>Secs each</label>
+              <input type="number" id="edit-cat-secs" min="1" />
+            </div>
+          </div>
+          <div class="btn-row">
+            <button class="btn-ghost" id="cancel-edit-cat">Cancel</button>
+            <button class="btn-small" id="save-edit-cat" style="flex:1;">Save changes</button>
+          </div>
         </div>
       </div>
     </section>
@@ -509,6 +532,7 @@ function renderPlantGrid(){
     }
     return `
     <div class="plant-card ${c.id===selectedCategoryId?'active':''}" data-cat="${c.id}">
+      <button class="edit-cat-btn" data-edit="${c.id}" title="Edit name or watering time">✎</button>
       <svg viewBox="0 0 24 24"><path d="M12 2c-2 4-2 7 0 10 2-3 2-6 0-10zM4 10c3 1 5 3 6 6-3 0-6-2-6-6zM20 10c-3 1-5 3-6 6 3 0 6-2 6-6zM12 12v10"/></svg>
       <div class="name">${escapeHtml(c.name)}</div>
       <div class="meta">${metaText}</div>
@@ -534,6 +558,47 @@ function applyCategoryToWaterTab(id){
 }
 function currentCategory(){
   return categories.find(c=>c.id===selectedCategoryId);
+}
+
+// ---------- edit a plant category (name + watering time) ----------
+let editingCategoryId = null;
+function openEditCategory(id){
+  const cat = categories.find(c=>c.id===id);
+  if(!cat) return;
+  editingCategoryId = id;
+  document.getElementById('add-cat-form').classList.add('hidden');
+  document.getElementById('edit-cat-name').value = cat.name;
+  document.getElementById('edit-cat-secs').value = cat.seconds;
+  document.getElementById('edit-cat-form').classList.remove('hidden');
+}
+function closeEditCategory(){
+  editingCategoryId = null;
+  document.getElementById('edit-cat-form').classList.add('hidden');
+}
+async function saveEditCategory(){
+  if(!editingCategoryId) return;
+  const cat = categories.find(c=>c.id===editingCategoryId);
+  if(!cat) return;
+  const name = document.getElementById('edit-cat-name').value.trim();
+  const secs = parseInt(document.getElementById('edit-cat-secs').value, 10);
+  if(!name){ toast('Give the plant a name'); return; }
+  if(!secs || secs < 1){ toast('Enter a valid number of seconds'); return; }
+
+  cat.name = name;
+  cat.seconds = secs;
+  await pushShared();
+  renderPlantGrid();
+
+  // If this is the plant currently loaded on the Water tab, refresh it live —
+  // the next round started will use the new watering time automatically.
+  if(selectedCategoryId === editingCategoryId){
+    document.getElementById('selected-plant-name').textContent = name;
+    document.getElementById('secs-each-display').textContent = secs + 's';
+    if(!timer.running) resetDialDisplay(secs);
+  }
+
+  toast(`Updated "${name}"`);
+  closeEditCategory();
 }
 
 // ---------- timer ----------
@@ -800,10 +865,17 @@ function bindEvents(){
   });
 
   document.getElementById('plant-grid').addEventListener('click', (e)=>{
+    const editBtn = e.target.closest('.edit-cat-btn');
+    if(editBtn){
+      openEditCategory(editBtn.dataset.edit);
+      return;
+    }
     const card = e.target.closest('.plant-card');
     if(!card) return;
     pickCategory(card.dataset.cat);
   });
+  document.getElementById('cancel-edit-cat').addEventListener('click', closeEditCategory);
+  document.getElementById('save-edit-cat').addEventListener('click', saveEditCategory);
   document.getElementById('go-home').addEventListener('click', ()=>{
     if(timer.running){ toast('Finish or stop the current round first'); return; }
     switchTab('home');
